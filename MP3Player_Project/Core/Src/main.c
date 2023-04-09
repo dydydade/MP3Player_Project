@@ -50,7 +50,7 @@
 #define End_Byte 0xEF              // Ï¢ÖÎ£å
 #define Acknowledge 0x00           //
 
-#define WAKEUP_SIGNAL 0x01			// ?ôú?Ñ±?ôî ?ãúÍ∑∏ÎÑê
+#define WAKEUP_SIGNAL 0x01			//
 
 /* USER CODE END PD */
 
@@ -135,7 +135,7 @@ int main(void)
   MX_FREERTOS_Init();
 
   /* Start scheduler */
-  osKernelStart();
+//  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -151,7 +151,7 @@ int main(void)
 //  SSD1306_GotoXY(10, 30);
 //  SSD1306_Puts(" WORLD! :)", &Font_11x18, 1);
 //  SSD1306_UpdateScreen(); // display
-//  HAL_Delay(2500);		// Î°úÍ≥†Î≥¥Ïó¨Ï£ºÎäî?ÔøΩÔøΩÔø?????
+//  HAL_Delay(2500);		// Î°úÍ≥†Î≥¥Ïó¨Ï£ºÎäî?ÔøΩÔøΩÔøΩ??????
 
   while (1)
   {
@@ -248,9 +248,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 			printf("you pressed button!\r\n");
 
+			if (xSemaphore == NULL) {
+				printf("xSemaphore is null -- from main.c\r\n");
+			}
+
 			if (xSemaphore != NULL) {
+				printf("xSemaphore is not null -- from main.c\r\n");
 				xSemaphoreGiveFromISR(xSemaphore, &xHigherPriorityTaskWoken);
 			}
+
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
 //			if(pauseStatus == 0)
 //			{

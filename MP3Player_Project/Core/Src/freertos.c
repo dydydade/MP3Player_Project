@@ -54,7 +54,6 @@
 /* USER CODE BEGIN Variables */
 TaskHandle_t vActivateTaskHandle = NULL;
 SemaphoreHandle_t xSemaphore;
-QueueHandle_t xQueue;
 StaticTask_t xTaskBuffer;
 StackType_t xTaskStack[configMINIMAL_STACK_SIZE];
 
@@ -110,8 +109,8 @@ void MX_FREERTOS_Init(void) {
 	SemaphoreHandle_t nextSongSem = xSemaphoreCreateBinary();
 	SemaphoreHandle_t nextVolumeSem = xSemaphoreCreateBinary();
 	SemaphoreHandle_t screenOnSem = xSemaphoreCreateBinary();
-	SemaphoreHandle_t xSemaphore = xSemaphoreCreateBinary();
-	xQueue = (QueueHandle_t)xSemaphore;
+	xSemaphore = xSemaphoreCreateBinary();
+//	xQueue = (QueueHandle_t)xSemaphore;
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -129,7 +128,9 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
+
   if (xSemaphore != NULL) {
+	  printf("xSemaphore is not null -- from freertos.c, Manager Task Create\r\n");
 	  xTaskCreate(vTaskManager, "Manager", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL);
 	  vTaskStartScheduler();
   }
@@ -175,8 +176,9 @@ void vActivateTask(void* pvParameters)
 
 void vTaskManager(void* pvParameters)
 {
+
     while (1) {
-        if (xSemaphoreTake(xQueue, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(xSemaphore, portMAX_DELAY) == pdTRUE) {
             if (vActivateTaskHandle != NULL) {
                 vTaskDelete(vActivateTaskHandle);
             }
@@ -193,5 +195,12 @@ void vTaskManager(void* pvParameters)
         }
     }
 }
+
+
+void takeSemaphoreFromISR(SemaphoreHandle_t *pxSemaphore, BaseType_t *pxHigherPriorityTaskWoken)
+{
+  xSemaphoreGiveFromISR(*pxSemaphore, pxHigherPriorityTaskWoken);
+}
+
 /* USER CODE END Application */
 
