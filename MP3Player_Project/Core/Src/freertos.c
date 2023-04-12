@@ -131,7 +131,7 @@ void MX_FREERTOS_Init(void) {
 
   if (xSemaphore != NULL) {
 	  printf("xSemaphore is not null -- from freertos.c, Manager Task Create\r\n");
-	  xTaskCreate(vTaskManager, "Manager", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL);
+	  xTaskCreate(vTaskManager, "Manager", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 	  vTaskStartScheduler();
   }
 
@@ -162,24 +162,23 @@ void StartDefaultTask(void const * argument)
 /* USER CODE BEGIN Application */
 void vActivateTask(void* pvParameters)
 {
-	while (1)
-	{
-		//
-		printf("Wake Up\r\n");
+	printf("Wake Up\r\n");
 
-		//
-		vTaskDelay(pdMS_TO_TICKS(5000));
-		printf("Fall Asleep\r\n");
-		vTaskDelete(NULL);
-	}
+	vTaskDelay(pdMS_TO_TICKS(5000));
+	printf("Fall Asleep\r\n");
+	vTaskDelete(NULL);
+//	vActivateTaskHandle = NULL;
 }
 
 void vTaskManager(void* pvParameters)
 {
 
     while (1) {
+    	printf("vTaskManager Start Waiting... Semaphore\r\n");
         if (xSemaphoreTake(xSemaphore, portMAX_DELAY) == pdTRUE) {
+        	printf("vTaskManager got Semaphore Successfully!\r\n");
             if (vActivateTaskHandle != NULL) {
+            	printf("vActivateTaskHandle is not NULL! Try Delete vActivateTaskHandle!\r\n");
                 vTaskDelete(vActivateTaskHandle);
             }
 
@@ -188,18 +187,15 @@ void vTaskManager(void* pvParameters)
                 "ActivateTask",
                 configMINIMAL_STACK_SIZE,
                 NULL,
-                tskIDLE_PRIORITY+1,
+				tskIDLE_PRIORITY + 2,
                 xTaskStack,
                 &xTaskBuffer
             );
+
+        	printf("Create New vActivateTaskHandle Successfully!\r\n");
+        	xSemaphoreGive(xSemaphore);
         }
     }
-}
-
-
-void takeSemaphoreFromISR(SemaphoreHandle_t *pxSemaphore, BaseType_t *pxHigherPriorityTaskWoken)
-{
-  xSemaphoreGiveFromISR(*pxSemaphore, pxHigherPriorityTaskWoken);
 }
 
 /* USER CODE END Application */

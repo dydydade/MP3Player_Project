@@ -135,7 +135,7 @@ int main(void)
   MX_FREERTOS_Init();
 
   /* Start scheduler */
-//  osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -151,7 +151,7 @@ int main(void)
 //  SSD1306_GotoXY(10, 30);
 //  SSD1306_Puts(" WORLD! :)", &Font_11x18, 1);
 //  SSD1306_UpdateScreen(); // display
-//  HAL_Delay(2500);		// 로고보여주는?���??????
+//  HAL_Delay(2500);		// 로고보여주는?���???????
 
   while (1)
   {
