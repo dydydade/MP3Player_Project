@@ -53,7 +53,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 TaskHandle_t vActivateTaskHandle = NULL;
-SemaphoreHandle_t xSemaphore;
+EventGroupHandle_t xEventGroup;
 StaticTask_t xTaskBuffer;
 StackType_t xTaskStack[configMINIMAL_STACK_SIZE];
 
@@ -75,6 +75,9 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 /* GetIdleTaskMemory prototype (linked to static allocation support) */
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 
+/* GetTimerTaskMemory prototype (linked to static allocation support) */
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize );
+
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
 static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
@@ -87,6 +90,19 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
   /* place for user code */
 }
 /* USER CODE END GET_IDLE_TASK_MEMORY */
+
+/* USER CODE BEGIN GET_TIMER_TASK_MEMORY */
+static StaticTask_t xTimerTaskTCBBuffer;
+static StackType_t xTimerStack[configTIMER_TASK_STACK_DEPTH];
+
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )
+{
+  *ppxTimerTaskTCBBuffer = &xTimerTaskTCBBuffer;
+  *ppxTimerTaskStackBuffer = &xTimerStack[0];
+  *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
+  /* place for user code */
+}
+/* USER CODE END GET_TIMER_TASK_MEMORY */
 
 /**
   * @brief  FreeRTOS initialization
@@ -109,7 +125,7 @@ void MX_FREERTOS_Init(void) {
 	SemaphoreHandle_t nextSongSem = xSemaphoreCreateBinary();
 	SemaphoreHandle_t nextVolumeSem = xSemaphoreCreateBinary();
 	SemaphoreHandle_t screenOnSem = xSemaphoreCreateBinary();
-	xSemaphore = xSemaphoreCreateBinary();
+	xEventGroup = xEventGroupCreate();
 //	xQueue = (QueueHandle_t)xSemaphore;
   /* USER CODE END RTOS_SEMAPHORES */
 
@@ -129,8 +145,8 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
 
-  if (xSemaphore != NULL) {
-	  printf("xSemaphore is not null -- from freertos.c, Manager Task Create\r\n");
+  if (xEventGroup != NULL) {
+	  printf("xEventGroup is not null -- from freertos.c, Manager Task Create\r\n");
 	  xTaskCreate(vTaskManager, "Manager", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 	  vTaskStartScheduler();
   }
@@ -167,34 +183,33 @@ void vActivateTask(void* pvParameters)
 	vTaskDelay(pdMS_TO_TICKS(5000));
 	printf("Fall Asleep\r\n");
 	vTaskDelete(NULL);
-//	vActivateTaskHandle = NULL;
 }
 
 void vTaskManager(void* pvParameters)
 {
 
     while (1) {
-    	printf("vTaskManager Start Waiting... Semaphore\r\n");
-        if (xSemaphoreTake(xSemaphore, portMAX_DELAY) == pdTRUE) {
-        	printf("vTaskManager got Semaphore Successfully!\r\n");
-            if (vActivateTaskHandle != NULL) {
-            	printf("vActivateTaskHandle is not NULL! Try Delete vActivateTaskHandle!\r\n");
-                vTaskDelete(vActivateTaskHandle);
-            }
+    	printf("vTaskManager Start Waiting... EventBit\r\n");
+    	xEventGroupWaitBits(xEventGroup, 0x01, pdTRUE, pdFALSE, portMAX_DELAY);
 
-            vActivateTaskHandle = xTaskCreateStatic(
-                vActivateTask,
-                "ActivateTask",
-                configMINIMAL_STACK_SIZE,
-                NULL,
-				tskIDLE_PRIORITY + 2,
-                xTaskStack,
-                &xTaskBuffer
-            );
+		printf("vTaskManager got EventBit Successfully!\r\n");
+		if (vActivateTaskHandle != NULL && eTaskGetState(vActivateTaskHandle) != eDeleted) {
+			printf("vActivateTaskHandle is not NULL! delete the old task. \r\n");
+			vTaskDelete(vActivateTaskHandle);
+		}
 
-        	printf("Create New vActivateTaskHandle Successfully!\r\n");
-        	xSemaphoreGive(xSemaphore);
-        }
+		vActivateTaskHandle = xTaskCreateStatic(
+			vActivateTask,
+			"ActivateTask",
+			configMINIMAL_STACK_SIZE,
+			NULL,
+			tskIDLE_PRIORITY + 2,
+			xTaskStack,
+			&xTaskBuffer
+		);
+
+		printf("Create New vActivateTaskHandle Successfully!\r\n");
+
     }
 }
 

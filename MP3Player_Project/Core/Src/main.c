@@ -64,7 +64,7 @@
 /* USER CODE BEGIN PV */
 
 extern TaskHandle_t vActivateTaskHandle;
-extern SemaphoreHandle_t xSemaphore;
+extern EventGroupHandle_t xEventGroup;
 extern StaticTask_t xTaskBuffer;
 extern StackType_t xTaskStack[configMINIMAL_STACK_SIZE];
 
@@ -151,7 +151,7 @@ int main(void)
 //  SSD1306_GotoXY(10, 30);
 //  SSD1306_Puts(" WORLD! :)", &Font_11x18, 1);
 //  SSD1306_UpdateScreen(); // display
-//  HAL_Delay(2500);		// 로고보여주는?���???????
+//  HAL_Delay(2500);		// 로고보여주는?���????????
 
   while (1)
   {
@@ -248,13 +248,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 			printf("you pressed button!\r\n");
 
-			if (xSemaphore == NULL) {
-				printf("xSemaphore is null -- from main.c\r\n");
+			if (xEventGroup == NULL) {
+				printf("xEventGroup is null -- from main.c\r\n");
 			}
 
-			if (xSemaphore != NULL) {
-				printf("xSemaphore is not null -- from main.c\r\n");
-				xSemaphoreGiveFromISR(xSemaphore, &xHigherPriorityTaskWoken);
+			if (xEventGroup != NULL) {
+				printf("xEventGroup is not null -- from main.c\r\n");
+				xEventGroupSetBitsFromISR(xEventGroup, 0x01, &xHigherPriorityTaskWoken);
 			}
 
 			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
