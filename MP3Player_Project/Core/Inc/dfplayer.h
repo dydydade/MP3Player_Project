@@ -18,23 +18,23 @@
 # define Acknowledge 0x00           // 피드백 미 수신
 
 
-void pause_Music();    //일시정지 명령어 0x0E를 파라미터로 전달
+void pauseMusic();    //일시정지 명령어 0x0E를 파라미터로 전달
 
-void reset_Music();    //일시정지 명령어 0x0E를 파라미터로 전달
+void restartMusic();    //일시정지 명령어 0x0E를 파라미터로 전달
 
-void switch_NextMusic(); //next music 명령어 0x01를 파라미터로 전달
+void switchNextMusic(); //next music 명령어 0x01를 파라미터로 전달
 
-void specify_Volume(uint8_t level);        // 볼륨 조절 함수
+void specifyVolume(uint8_t level);        // 볼륨 조절 함수
 
-void specify_Track(int16_t track);      // 트랙 지정 함수
+void specifyTrack(int16_t track);      // 트랙 지정 함수
 
-void get_Current_Volume();  // 현재 Volume값 조회
+uint8_t getCurrentVolume();  // 현재 Volume값 조회
 
-void get_Current_Music();  // 현재 재생중인 곡 번호 조회
+uint8_t getCurrentTrackNo();  // 현재 재생중인 곡 번호 조회
 
-void get_Total_File_Count();  // mp3파일 개수 조회
+uint8_t getTotalFileCount();  // mp3파일 개수 조회
 
-void execute_CMD(uint8_t CMD, uint8_t Par1, uint8_t Par2);     // 시리얼 통신을 통해 실제 명령어구문을 전달하는 함수
+void executeCMD(uint8_t CMD, uint8_t Par1, uint8_t Par2);     // 시리얼 통신을 통해 실제 명령어구문을 전달하는 함수
 
 uint8_t highByte(int16_t);
 

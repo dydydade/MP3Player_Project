@@ -29,7 +29,6 @@
 #include "fonts.h"
 #include "ssd1306.h"
 #include "fonts.h"
-#include "bitmap.h"
 #include <stdio.h>
 
 #include "portmacro.h"
@@ -50,7 +49,11 @@
 #define End_Byte 0xEF              // 종료
 #define Acknowledge 0x00           //
 
-#define WAKEUP_SIGNAL 0x01			//
+#define CENTER_BIT (1<<0) // 0x01
+#define UP_BIT (1<<1) // 0x02
+#define DOWN_BIT (1<<2) // 0x04
+#define RIGHT_BIT (1<<3) // 0x08
+#define LEFT_BIT (1<<4) // 0x10
 
 /* USER CODE END PD */
 
@@ -68,13 +71,13 @@ extern EventGroupHandle_t xEventGroup;
 extern StaticTask_t xTaskBuffer;
 extern StackType_t xTaskStack[configMINIMAL_STACK_SIZE];
 
-uint8_t data[10];
-uint8_t pauseStatus = 0;
-uint8_t sleepStatus = 0;
-uint32_t currentVolume = 4; // default volume
-uint32_t changeVolume = 4;
-uint32_t currentTrackNo = 1;
-uint32_t changeTrackNo = 1;
+extern uint8_t data[10];
+extern uint8_t pauseStatus;
+extern uint8_t activeStatus;
+extern uint8_t currentVolume; // default volume
+extern uint8_t changeVolume;
+extern uint8_t currentTrackNo;
+extern uint8_t changeTrackNo;
 
 extern void vActivateTask(void* pvParameters);
 
@@ -129,39 +132,31 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
   SSD1306_Init();
+
+  SSD1306_GotoXY(0, 10);
+  SSD1306_Puts("HELLO", &Font_11x18, 1);
+  SSD1306_GotoXY(10, 30);
+  SSD1306_Puts(" WORLD! :)", &Font_11x18, 1);
+  SSD1306_UpdateScreen();  // display
+  HAL_Delay(2500);		   // 로고
+  specifyVolume(4);
+  HAL_Delay(500);
+  specifyTrack(1);
+  HAL_Delay(500);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
 
   /* Start scheduler */
-  osKernelStart();
+  vTaskStartScheduler();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-//  HAL_Delay(1500);
-//  specify_Track(3);
-//  HAL_Delay(500);
-//  specify_Volume(4);
-//
-//  SSD1306_GotoXY(0, 10);
-//  SSD1306_Puts("HELLO", &Font_11x18, 1);
-//  SSD1306_GotoXY(10, 30);
-//  SSD1306_Puts(" WORLD! :)", &Font_11x18, 1);
-//  SSD1306_UpdateScreen(); // display
-//  HAL_Delay(2500);		// 로고보여주는?���????????
-
   while (1)
   {
-
-//	  HAL_Delay(500);
-//	  HAL_Delay(500);
-//	  get_Current_Volume();
-//	  get_Current_Music();
-
-//	  HAL_UART_Transmit(&huart1, pData, Size, 1000);
 
     /* USER CODE END WHILE */
 
@@ -240,102 +235,93 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+    // center button : pause/restart music
 	if(GPIO_Pin == GPIO_PIN_1)
 	{
 		if(HAL_GetTick() - beforeTick >= 200)
 		{
 			beforeTick = HAL_GetTick();
 
-			printf("you pressed button!\r\n");
-
-			if (xEventGroup == NULL) {
-				printf("xEventGroup is null -- from main.c\r\n");
-			}
+			printf("you pressed center button!\r\n");
 
 			if (xEventGroup != NULL) {
-				printf("xEventGroup is not null -- from main.c\r\n");
-				xEventGroupSetBitsFromISR(xEventGroup, 0x01, &xHigherPriorityTaskWoken);
+				xEventGroupSetBitsFromISR(xEventGroup, CENTER_BIT, &xHigherPriorityTaskWoken);
 			}
 
 			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
-//			if(pauseStatus == 0)
-//			{
-//				pause_Music();
-//				pauseStatus = 1;
-//			}
-//			else
-//			{
-//				restart_Music();
-//				pauseStatus = 0;
-//			}
-//
-//			get_Current_Volume();
-//			char current_volume[5];
-//			int8_t current_volume_i = data[6];
-//			itoa(current_volume_i, current_volume, 10);
-//
-//			char change_volume[5];
-//			itoa(changeVolume, change_volume, 10);
-//
-//			get_Current_Music();
-//			char current_music[5];
-//			int8_t current_music_i = data[6];
-//			itoa(current_music_i, current_music, 10);
-//
-//			changeVolume += 1;
-//			SSD1306_Clear_And_Update_Screen(current_volume, change_volume, current_music, "3");
 		}
 	}
+
+    // up button : volume up
 	if(GPIO_Pin == GPIO_PIN_2)
+	{
+
+		if(HAL_GetTick() - beforeTick >= 200)
+		{
+			beforeTick = HAL_GetTick();
+
+			printf("you pressed up button!\r\n");
+
+			if (xEventGroup != NULL) {
+				xEventGroupSetBitsFromISR(xEventGroup, UP_BIT, &xHigherPriorityTaskWoken);
+			}
+
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
+
+	}
+
+    // down button : volume down
+	if(GPIO_Pin == GPIO_PIN_3)
 	{
 		if(HAL_GetTick() - beforeTick >= 200)
 		{
 			beforeTick = HAL_GetTick();
-			switch_NextMusic();
+
+			printf("you pressed down button!\r\n");
+
+			if (xEventGroup != NULL) {
+				xEventGroupSetBitsFromISR(xEventGroup, DOWN_BIT, &xHigherPriorityTaskWoken);
+			}
+
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 		}
 	}
-	if(GPIO_Pin == GPIO_PIN_3)
-	{
 
-	}
+	// right button : next song
 	if(GPIO_Pin == GPIO_PIN_4)
 	{
+		if(HAL_GetTick() - beforeTick >= 200)
+		{
+			beforeTick = HAL_GetTick();
 
+			printf("you pressed right button!\r\n");
+
+			if (xEventGroup != NULL) {
+				xEventGroupSetBitsFromISR(xEventGroup, RIGHT_BIT, &xHigherPriorityTaskWoken);
+			}
+
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
 	}
+
+	// left button : previous song
 	if(GPIO_Pin == GPIO_PIN_5)
 	{
+		if(HAL_GetTick() - beforeTick >= 200)
+		{
+			beforeTick = HAL_GetTick();
 
+			printf("you pressed left button!\r\n");
+
+			if (xEventGroup != NULL) {
+				xEventGroupSetBitsFromISR(xEventGroup, LEFT_BIT, &xHigherPriorityTaskWoken);
+			}
+
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
 	}
-}
-
-void SSD1306_Clear_And_Update_Screen(char* currVol, char* chngVol, char* currSong, char* chngSong)
-{
-	SSD1306_Clear();
-	SSD1306_DrawBitmap(4, 0, Volume_Bitmap, 42, 30, 1);
-	SSD1306_DrawBitmap(2, 34, Music_Bitmap, 42, 30, 1);
-
-	SSD1306_GotoXY(42, 5);
-	SSD1306_Puts("CURR VOL :", &Font_7x10, 1);
-	SSD1306_GotoXY(111, 5);
-	SSD1306_Puts(currVol, &Font_7x10, 1);
-
-	SSD1306_GotoXY(42, 15);
-	SSD1306_Puts("CHNG VOL :", &Font_7x10, 1);
-	SSD1306_GotoXY(111, 15);
-	SSD1306_Puts(chngVol, &Font_7x10, 1);
-
-	SSD1306_GotoXY(42, 39);
-	SSD1306_Puts("CURR SONG:", &Font_7x10, 1);
-	SSD1306_GotoXY(111, 39);
-	SSD1306_Puts(currSong, &Font_7x10, 1);
-
-	SSD1306_GotoXY(42, 49);
-	SSD1306_Puts("CHNG SONG:", &Font_7x10, 1);
-	SSD1306_GotoXY(111, 49);
-	SSD1306_Puts(chngSong, &Font_7x10, 1);
-
-	SSD1306_UpdateScreen(); // display
 }
 
 

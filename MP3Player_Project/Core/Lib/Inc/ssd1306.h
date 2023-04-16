@@ -296,6 +296,7 @@ void SSD1306_Stopscroll(void);
 void SSD1306_InvertDisplay (int i);
 
 
+void SSD1306_Display_Volume_Track_Info(uint8_t currVol, uint8_t chngVol, uint8_t currTrack, uint8_t chngTrack);
 
 
 
